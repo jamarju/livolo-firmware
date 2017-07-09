@@ -12,6 +12,7 @@
 extern "C" {
 #endif
 
+void switch_preinit();
 void switch_init();
 void switch_toggle();
 inline bit switch_is_on();

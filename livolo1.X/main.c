@@ -58,15 +58,17 @@ void main(void) {
     OSCTUNE = 0b00001111; // this will set Fosc to 8.88 MHz as measured by me
 #endif
 
+    // Early (before osc is settled) inits.
+    switch_preinit();
+    
     // Tris config (1=in, 0=out)
-    TRISA   = 0b11111111;
+    TRISA   = 0b11111101;
     TRISB   = 0b10111111;
-    TRISC   = 0b11101111;
+    TRISC   = 0b00101011;
     
     // All pins digital)
     ANSEL   = 0b00000000;
     ANSELH  = 0b00000000;
-
     
     // Wait until osc is stable
     while (HTS == 0) ;
