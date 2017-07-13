@@ -9,22 +9,6 @@ static bit switch_status = 0;
  * Private functions
  */
 
-static void
-switch_on(void)
-{
-    RELAY1_S = 1;
-    __delay_ms(20);
-    RELAY1_S = 0;
-}
-
-static void
-switch_off(void)
-{
-    RELAY1_R = 1;
-    __delay_ms(20);
-    RELAY1_R = 0;
-}
-
 
 /*
  * Public functions
@@ -33,7 +17,7 @@ switch_off(void)
 /**
  * HFE60 datasheet says to not energize both set and reset coils at the
  * same time. Since PORTx output status is unknown on reset, let's pull
- * them down early (even before
+ * them down early
  * 
  * If R and S are pulled high at the same time the pic hangs and the whole
  * thing starts drawing a lot of current.
@@ -57,22 +41,31 @@ switch_init()
 void
 switch_toggle()
 {
-    switch_status = !switch_status;
-    // Toggle led
-    LED = switch_status ? LED_RED : LED_BLUE;
-    // Toggle relay
     if (switch_status) {
-        switch_on();
-    } else {
         switch_off();
+    } else {
+        switch_on();
     }
 }
 
 
-inline bit 
-switch_is_on()
+void
+switch_on(void)
 {
-    return switch_status;
+    switch_status = 1;
+    LED = LED_RED;
+    RELAY1_S = 1;
+    __delay_ms(20);
+    RELAY1_S = 0;
 }
 
+void
+switch_off(void)
+{
+    switch_status = 0;
+    LED = LED_BLUE;
+    RELAY1_R = 1;
+    __delay_ms(20);
+    RELAY1_R = 0;
+}
 

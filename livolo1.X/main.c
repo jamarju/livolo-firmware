@@ -47,18 +47,8 @@
  * RC7 ( 9) O RELAY1-R
  */
 
-
 void main(void) {
-    uint32_t i;
-#if 0
-    // Crank up to 8 MHz
-    OSCCONbits.IRCF = 0b111; // 8 MHz
-
-    // Crank upper osc
-    OSCTUNE = 0b00001111; // this will set Fosc to 8.88 MHz as measured by me
-#endif
-
-    // Early (before osc is settled) inits.
+    // Early inits (before osc is settled)
     switch_preinit();
     
     // Tris config (1=in, 0=out)
@@ -66,7 +56,7 @@ void main(void) {
     TRISB   = 0b10111111;
     TRISC   = 0b00101011;
     
-    // All pins digital)
+    // All pins digital
     ANSEL   = 0b00000000;
     ANSELH  = 0b00000000;
     
@@ -77,28 +67,19 @@ void main(void) {
     uart_init();
     capsensor_init();
 
-    LED = LED_BLUE;
-    
     for (;;) {
-        if (OERR) {
-            uart_write('O');
-            __delay_ms(20);
-            CREN = 0;
-            CREN = 1;
-        }
         if (uart_data_ready()) {
             uint8_t c = uart_read();
-            if (c == 'r') LED = LED_RED;
-            if (c == 'a') LED = LED_BLUE;
-            printf("ST:%d\r\n", LED);
+            printf("\n%c RECV\r\n", c);
+            if (c == 'i') switch_on();
+            if (c == 'o') switch_off();
+            if (c == ' ') switch_toggle();
         }
         
         if (capsensor_is_ready_for_another()) {
             if (capsensor_is_button_pressed()) {
                 switch_toggle();
             }
-            putchar('.');
-            //printf("%d\r\n", capsensor_get_rolling_average());
         }
     }
 }
