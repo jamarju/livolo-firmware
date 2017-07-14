@@ -1,5 +1,7 @@
 # Firmware for Livolo light switches
 
+[![Livolo control video](http://img.youtube.com/vi/t0wluQbNzUw/0.jpg)](http://www.youtube.com/watch?v=t0wluQbNzUw)
+
 I wanted to add on/off feedback and wired remote control to a Livolo switch. Their _brain_ is a PIC16F690, but unfortunately the chip comes code protected, so I had to write this firmware from scratch.
 
 ## Features:
