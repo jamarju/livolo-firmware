@@ -9,6 +9,9 @@ extern "C" {
 // Compilation flags
 // --------------------------------------------------------------------
 
+// enable debug serial out, note this also slows down time between sensor reads
+#define DEBUG
+
 // Use RB4 (RF module pin #5 which is easier to solder) as TX instead of RB7/TX
 #define UART_TX_BITBANG_ON_RB4
     
@@ -16,9 +19,6 @@ extern "C" {
 // --------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------
-
-// enable debug serial out, note this also slows down time between sensor reads
-#define DEBUG
 
 // for __delay_ms and __delay_us
 #define _XTAL_FREQ          4000000UL 
