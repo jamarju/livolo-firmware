@@ -24,7 +24,7 @@ Should be easy to work with this, too:
 
  * [VL-C702X-2](https://www.aliexpress.com/item/Free-Shipping-White-Crystal-Glass-Switch-Panel-EU-Standard-VL-C702-11-Livolo-AC-110-250V/512770913.html) VER: C1 (2-gang, 1-way, no RF, EU version)
 
-Note that there is no guarantee that buying from these links will get you those versions since they seem to change desings often.
+Note that there is no guarantee that buying from these links will get you those versions since they seem to change designs often.
 
 ## Working principle
 
@@ -56,7 +56,7 @@ So I had to add a battery to provide the extra oomph to light up the diode of on
 
 ![schematic](img/livolo-serial.png)
 
-Of course this is only valid for debugging to get data out of the PIC. The battery thing makes this inviable for a permanent installation and I'm still looking for other solutions.
+Of course this is only valid for debugging to get data out of the PIC. The battery thing makes this unfeasible for a permanent installation and I'm still looking for other solutions.
 
 Note that I had to bitbang pin RB4 on the PIC for TX out because that PIN is exposed on the empty J6 header along with RX and Vss. That way we have everything we need in J6, which it's through hole and easier to solder on.
 
