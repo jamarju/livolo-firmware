@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+bit switch_status;
+
 void switch_preinit();
 void switch_init();
 void switch_toggle();

@@ -5,6 +5,7 @@
 #include "uart.h"
 #include "capsensor.h"
 #include "switch.h"
+#include "adc.h"
 
 // PIC16F690 Configuration Bit Settings
 
@@ -25,39 +26,45 @@
 // Use project enums instead of #define for ON and OFF.
 
 /**
- * RA0 (19) I
- * RA1 (18) O RELAY1-S
- * RA2 (17) I T0CKI
- * RA3 ( 4) I MCLR only
- * RA4 ( 3) I
- * RA5 ( 2) I
+ * JP1-CR: C=column R=row where 12v=A7, Vdd=B1, Vss=B2 and so on
+ * In brackets [behavior] as observed in the original firmware
+ * RF = RF connector on main board
+ * J1 = J1 connector on PIC board
  * 
- * RB4 (13) I (goes to RF5)
+ * RA0 (19) O ??? --- JP1-B7, [4 ms high-Z pulse on start, then 0v]
+ * RA1 (18) O RELAY1-S, [4 ms high-Z pulse on start, then 0v]
+ * RA2 (17) I T0CKI --- RC4 (6) C2OUT
+ * RA3 ( 4) I MCLR only [high-Z]
+ * RA4 ( 3) A AN3 --- JP1-A3, ON/OFF STATUS??? [high-Z]
+ * RA5 ( 2) I --- JP1-A1 --- R23 (unpopulated) [3v when red, 0v when blue]
+ * 
+ * RB4 (13) I --- JP1-B3 --- RF5, O if soft-uart TX
  * RB5 (12) I USART RX
- * RB6 (11) O LED (0=blue, 1=red)
- * RB7 (10) I USART TX (yes, must be I)
+ * RB6 (11) O LED1 (0=blue, 1=red)
+ * RB7 (10) I (yes, must be I) USART TX --- JP1-A2 --- R24 (unpopulated)
  * 
- * RC0 (16) I
- * RC1 (15) X (NC) ---> CAP READ 2 in the 2-gang switch?
- * RC2 (14) O RELAY2-S
+ * RC0 (16) O BUZZER (if any) [4 ms high-Z pulse on start, then 0v]
+ * RC1 (15) I C12IN1- (negative feedback of C2), CAP READ 2 (2-gang only)
+ * RC2 (14) O RELAY2-S (2-gang only)
  * RC3 ( 7) I C12IN3- (negative feedback of C2), CAP READ 1
  * RC4 ( 6) O C2OUT (uses C2 as a astable multivibrator)
- * RC5 ( 5) X (NC)
- * RC6 ( 8) O RELAY2-R
+ * RC5 ( 5) O LED2 (0=blue, 1=red) (2-gang only)
+ * RC6 ( 8) O RELAY2-R (2-gang only)
  * RC7 ( 9) O RELAY1-R
  */
 
 void main(void) {
     // Early inits (before osc is settled)
     switch_preinit();
+    adc_preinit();
     
-    // Tris config (1=in, 0=out)
+    // Tris config (1=in/analog, 0=out)
     TRISA   = 0b11111101;
     TRISB   = 0b10111111;
     TRISC   = 0b00101011;
     
-    // All pins digital
-    ANSEL   = 0b00000000;
+    // All pins digital, AN3 analog
+    ANSEL   = 0b00001000;
     ANSELH  = 0b00000000;
     
     // Wait until osc is stable
@@ -80,6 +87,16 @@ void main(void) {
             if (capsensor_is_button_pressed()) {
                 switch_toggle();
             }
+            adc_read_power();
+#ifdef DEBUG
+            printf("%u,%u,%u,%c,%u,%c\r\n", 
+                    capsensor_rolling_avg, 
+                    capsensor_rolling_avg_on_trip, 
+                    capsensor_freq,
+                    capsensor_status,
+                    adc_power,
+                    switch_status ? 'I' : 'O');
+#endif    
         }
     }
 }

@@ -1,17 +1,24 @@
 #include <xc.h>
 #include <stdint.h>
-#include <stdio.h>
 #include "capsensor.h"
 #include "config.h"
 
 #define ABS(x) ((int16_t)(x) >= 0 ? (x) : (-(x)))
 
-
-static uint16_t rolling_avg = 0;
-static uint16_t rolling_avg_on_trip = 0;
+/*
+ * Private vars
+ */
 static uint8_t avgs = 0;
 static bit tripped = 0;
 static uint8_t cycles_pressed = 0;
+
+/*
+ * Public vars (for debugging from main)
+ */
+uint16_t capsensor_freq;
+uint16_t capsensor_rolling_avg = 0;
+uint16_t capsensor_rolling_avg_on_trip = 0;
+uint8_t capsensor_status = 'R';  // T=tripped, R=release, S=switch, W=water 
 
 /*
  * Inline macros (silly xc8 doesn't seem to inline functions)
@@ -90,7 +97,7 @@ capsensor_init(void)
         CAPSENSOR_WAIT_T0_OVERFLOW();
     }
     uint16_t tmr1 = CAPSENSOR_TIME();
-    rolling_avg = tmr1 / 16;
+    capsensor_rolling_avg = tmr1 / 16;
 }
 
 
@@ -108,37 +115,32 @@ capsensor_is_button_pressed(void)
     
     capsensor_start();
     CAPSENSOR_WAIT_T0_OVERFLOW();
-    uint16_t freq = CAPSENSOR_TIME();
-    
-    printf("%u %u %u\r", rolling_avg, rolling_avg_on_trip, freq);
+    capsensor_freq = CAPSENSOR_TIME();
     
     if (! tripped) {
-        rolling_avg_on_trip = rolling_avg;
-        if (ABS(rolling_avg - freq) > TRIP_THRESHOLD * rolling_avg / 256) {
-            puts("\nTRIP\r");
+        capsensor_rolling_avg_on_trip = capsensor_rolling_avg;
+        if (ABS(capsensor_rolling_avg - capsensor_freq) > TRIP_THRESHOLD * capsensor_rolling_avg / 256) {
+            capsensor_status = 'T'; // TRIPPED
             tripped = 1;
             cycles_pressed = 0;
         }
     } else {
         cycles_pressed++;
         if (cycles_pressed > MAX_READS_TO_RELEASE) {
-            puts("\nWATER\r");
-            // WATER
+            capsensor_status = 'W'; // WATER
             // it's a water drop, adapt to the new conditions
             // (ie. keep the latest rolling average)
             tripped = 0;
         }
-        else if (ABS(rolling_avg_on_trip - freq) < HYST_THRESHOLD * rolling_avg_on_trip / 256) {
+        else if (ABS(capsensor_rolling_avg_on_trip - capsensor_freq) < HYST_THRESHOLD * capsensor_rolling_avg_on_trip / 256) {
             // finger release before MAX_TIME_TO_RELEASE
             tripped = 0;
-            rolling_avg = rolling_avg_on_trip;
-            puts("\nRELEASE\r");
-            // RELEASE
+            capsensor_rolling_avg = capsensor_rolling_avg_on_trip;
+            capsensor_status = 'R'; // RELEASE
 
             if (cycles_pressed > MIN_READS_TO_RELEASE) {
                 // short trip -> ignore
-                // VALID PRESS
-                puts("\nSW!\r");
+                capsensor_status = 'S';
                 valid_press = 1;
             }
         }
@@ -148,7 +150,7 @@ capsensor_is_button_pressed(void)
     // to adapt to the new situation fast (ie water drop))
     avgs++;
     if (tripped || (avgs % AVERAGING_RATE == 0)) {
-        rolling_avg = (rolling_avg * 15 + freq + 8) / 16;
+        capsensor_rolling_avg = (capsensor_rolling_avg * 15 + capsensor_freq + 8) / 16;
     }
     
     return valid_press;

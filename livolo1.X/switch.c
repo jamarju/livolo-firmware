@@ -3,12 +3,12 @@
 #include "switch.h"
 #include "config.h"
 
-static bit switch_status = 0;
 
 /*
- * Private functions
+ * Public vars
  */
 
+bit switch_status = 0;
 
 /*
  * Public functions

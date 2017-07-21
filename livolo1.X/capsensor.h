@@ -4,6 +4,11 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+    
+uint16_t capsensor_freq;
+uint16_t capsensor_rolling_avg;
+uint16_t capsensor_rolling_avg_on_trip;
+uint8_t capsensor_status;
 
 void capsensor_init(void);
 bit capsensor_is_button_pressed(void);

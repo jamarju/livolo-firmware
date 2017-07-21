@@ -17,6 +17,9 @@ extern "C" {
 // Constants
 // --------------------------------------------------------------------
 
+// enable debug serial out, note this also slows down time between sensor reads
+#define DEBUG
+
 // for __delay_ms and __delay_us
 #define _XTAL_FREQ          4000000UL 
 
@@ -41,7 +44,11 @@ extern "C" {
 #define AVERAGING_RATE      8
 
 // in Fosc/4 cycles (= usec)
+#ifdef DEBUG
+#define TIME_BETWEEN_READS  32768
+#else
 #define TIME_BETWEEN_READS  16384
+#endif
 
 // Friendly pin names
 #define LED         RB6
