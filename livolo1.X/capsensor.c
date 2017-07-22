@@ -3,31 +3,40 @@
 #include "capsensor.h"
 #include "config.h"
 
-#define ABS(x) ((int16_t)(x) >= 0 ? (x) : (-(x)))
+
+/*
+ * Private constants
+ */
+#define ST_RELEASED     0
+#define ST_TRIPPED      1
+
+/*
+ * Private macros
+ */
+#define ABS(x) \
+    ((int16_t)(x) >= 0 ? (x) : (-(x)))
+
+#define CAPSENSOR_WAIT_T0_OVERFLOW() \
+    while (!T0IF) ; \
+    T0IF = 0;
+
+#define CAPSENSOR_TIME() \
+    TMR1
 
 /*
  * Private vars
  */
 static uint8_t avgs = 0;
-static bit tripped = 0;
-static uint8_t cycles_pressed = 0;
+static uint8_t cycles = 0;
 
 /*
  * Public vars (for debugging from main)
  */
 uint16_t capsensor_freq;
 uint16_t capsensor_rolling_avg = 0;
-uint16_t capsensor_rolling_avg_on_trip = 0;
-uint8_t capsensor_status = 'R';  // T=tripped, R=release, S=switch, W=water 
+uint16_t capsensor_frozen_avg = 0;
+bit capsensor_status = ST_RELEASED;
 
-/*
- * Inline macros (silly xc8 doesn't seem to inline functions)
- */
-#define CAPSENSOR_WAIT_T0_OVERFLOW() \
-    while (!T0IF) ; \
-    T0IF = 0;
-
-#define CAPSENSOR_TIME() TMR1
 
 /*
  * Private functions
@@ -102,57 +111,49 @@ capsensor_init(void)
 
 
 bit
-capsensor_is_ready_for_another(void)
-{
-    return (TMR1 > TIME_BETWEEN_READS);
-}
-
-
-bit
 capsensor_is_button_pressed(void)
 {
-    uint8_t valid_press = 0;
+    uint8_t do_switch = 0;
     
     capsensor_start();
     CAPSENSOR_WAIT_T0_OVERFLOW();
     capsensor_freq = CAPSENSOR_TIME();
     
-    if (! tripped) {
-        capsensor_rolling_avg_on_trip = capsensor_rolling_avg;
-        if (ABS(capsensor_rolling_avg - capsensor_freq) > TRIP_THRESHOLD * capsensor_rolling_avg / 256) {
-            capsensor_status = 'T'; // TRIPPED
-            tripped = 1;
-            cycles_pressed = 0;
-        }
-    } else {
-        cycles_pressed++;
-        if (cycles_pressed > MAX_READS_TO_RELEASE) {
-            capsensor_status = 'W'; // WATER
-            // it's a water drop, adapt to the new conditions
-            // (ie. keep the latest rolling average)
-            tripped = 0;
-        }
-        else if (ABS(capsensor_rolling_avg_on_trip - capsensor_freq) < HYST_THRESHOLD * capsensor_rolling_avg_on_trip / 256) {
-            // finger release before MAX_TIME_TO_RELEASE
-            tripped = 0;
-            capsensor_rolling_avg = capsensor_rolling_avg_on_trip;
-            capsensor_status = 'R'; // RELEASE
-
-            if (cycles_pressed > MIN_READS_TO_RELEASE) {
-                // short trip -> ignore
-                capsensor_status = 'S';
-                valid_press = 1;
+    switch (capsensor_status) {
+        case ST_RELEASED:
+            capsensor_frozen_avg = capsensor_rolling_avg;
+            if ((int16_t)(capsensor_rolling_avg - capsensor_freq) > (int16_t)(TRIP_THRESHOLD * capsensor_rolling_avg / 256)) {
+                cycles++;
+                if (cycles > READS_TO_TRIP) {
+                    cycles = 0;
+                    capsensor_status = ST_TRIPPED;
+                    do_switch = 1;
+                }
+            } else {
+                cycles = 0;
             }
-        }
+            break;
+        case ST_TRIPPED:
+            if ((int16_t)(capsensor_frozen_avg - capsensor_freq) < (int16_t)(HYST_THRESHOLD * capsensor_frozen_avg / 256)) {
+                cycles = 0;
+                capsensor_status = ST_RELEASED;
+            } else {
+                cycles++;
+                if (cycles > RELEASE_TIMEOUT) {
+                    cycles = 0;
+                    capsensor_status = ST_RELEASED;
+                }
+            }
+            break;
     }
     
     // when the button is tripped make the rolling every cycle in case we need
-    // to adapt to the new situation fast (ie water drop))
+    // to adapt to the new situation fast (ie water drop)
     avgs++;
-    if (tripped || (avgs % AVERAGING_RATE == 0)) {
+    if (capsensor_status == ST_TRIPPED || (avgs % AVERAGING_RATE == 0)) {
         capsensor_rolling_avg = (capsensor_rolling_avg * 15 + capsensor_freq + 8) / 16;
     }
     
-    return valid_press;
+    return do_switch;
 }
 

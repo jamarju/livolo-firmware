@@ -75,6 +75,7 @@ void main(void) {
     capsensor_init();
 
     for (;;) {
+#ifdef ACCEPT_CMDS_VIA_UART
         if (uart_data_ready()) {
             uint8_t c = uart_read();
             printf("\n%c RECV\r\n", c);
@@ -82,20 +83,20 @@ void main(void) {
             if (c == 'o') switch_off();
             if (c == ' ') switch_toggle();
         }
-        
-        if (capsensor_is_ready_for_another()) {
+#endif        
+        if (CAPSENSOR_IS_READY_FOR_ANOTHER()) {
             if (capsensor_is_button_pressed()) {
                 switch_toggle();
             }
             adc_read_power();
 #ifdef DEBUG
-            printf("%u,%u,%u,%c,%u,%c\r\n", 
+            printf("%u,%u,%u,%u,%u,%u\r\n", 
                     capsensor_rolling_avg, 
-                    capsensor_rolling_avg_on_trip, 
+                    capsensor_frozen_avg, 
                     capsensor_freq,
                     capsensor_status,
                     adc_power,
-                    switch_status ? 'I' : 'O');
+                    switch_status);
 #endif    
         }
     }
