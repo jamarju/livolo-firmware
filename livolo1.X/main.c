@@ -5,7 +5,7 @@
 #include "uart.h"
 #include "capsensor.h"
 #include "switch.h"
-#include "adc.h"
+#include "power.h"
 
 // PIC16F690 Configuration Bit Settings
 
@@ -35,7 +35,7 @@
  * RA1 (18) O RELAY1-S, [4 ms high-Z pulse on start, then 0v]
  * RA2 (17) I T0CKI --- RC4 (6) C2OUT
  * RA3 ( 4) I MCLR only [high-Z]
- * RA4 ( 3) A AN3 --- JP1-A3, ON/OFF STATUS??? [high-Z]
+ * RA4 ( 3) A AC POWER HEARTBEAT --- JP1-A3 [high-Z]
  * RA5 ( 2) I --- JP1-A1 --- R23 (unpopulated) [3v when red, 0v when blue]
  * 
  * RB4 (13) I --- JP1-B3 --- RF5, O if soft-uart TX
@@ -56,16 +56,20 @@
 void main(void) {
     // Early inits (before osc is settled)
     switch_preinit();
-    adc_preinit();
-    
+    power_preinit();
+
     // Tris config (1=in/analog, 0=out)
     TRISA   = 0b11111101;
     TRISB   = 0b10111111;
     TRISC   = 0b00101011;
     
     // All pins digital, AN3 analog
-    ANSEL   = 0b00001000;
+    ANSEL   = 0b00000000;
     ANSELH  = 0b00000000;
+    
+    // Timer 1 ON (1 us resolution at Fosc = 4 MHz)
+    TMR1    = 0;
+    TMR1ON  = 1;
     
     // Wait until osc is stable
     while (HTS == 0) ;
@@ -74,6 +78,8 @@ void main(void) {
     uart_init();
     capsensor_init();
 
+    uint16_t t0 = 0;
+    
     for (;;) {
 #ifdef ACCEPT_CMDS_VIA_UART
         if (uart_data_ready()) {
@@ -84,18 +90,22 @@ void main(void) {
             if (c == ' ') switch_toggle();
         }
 #endif        
-        if (CAPSENSOR_IS_READY_FOR_ANOTHER()) {
-            if (capsensor_is_button_pressed()) {
+        if (! power_read()) {
+            switch_off();
+        }
+
+        if (TMR1 - t0 > TIME_BETWEEN_READS) {
+            t0 += TIME_BETWEEN_READS;
+            if (capsensor_is_button_pressed() && power_status) {
                 switch_toggle();
             }
-            adc_read_power();
 #ifdef DEBUG
             printf("%u,%u,%u,%u,%u,%u\r\n", 
                     capsensor_rolling_avg, 
                     capsensor_frozen_avg, 
                     capsensor_freq,
                     capsensor_status,
-                    adc_power,
+                    power_status,
                     switch_status);
 #endif    
         }

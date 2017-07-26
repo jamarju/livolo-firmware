@@ -52,7 +52,14 @@ extern "C" {
 #define TIME_BETWEEN_READS  16384
 #endif
 
+// Time to shutdown the relays after an outage is detected (usec)
+#define TIME_TO_SHUTDOWN    200000UL
+
+    
+// --------------------------------------------------------------------
 // Friendly pin names
+// --------------------------------------------------------------------
+
 #define LED         RB6
 #define LED_BLUE    0
 #define LED_RED     1

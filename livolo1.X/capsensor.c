@@ -13,15 +13,9 @@
 /*
  * Private macros
  */
-#define ABS(x) \
-    ((int16_t)(x) >= 0 ? (x) : (-(x)))
-
 #define CAPSENSOR_WAIT_T0_OVERFLOW() \
     while (!T0IF) ; \
     T0IF = 0;
-
-#define CAPSENSOR_TIME() \
-    TMR1
 
 /*
  * Private vars
@@ -44,12 +38,8 @@ bit capsensor_status = ST_RELEASED;
 static inline void
 capsensor_start(void)
 {
-    TMR1ON  = 0;
-    TMR1    = 0; // reset T1 (= stopwatch)
-    T1IF    = 0; // also clear T1's IF since we use it to time between readings
     TMR0    = 0; // reset T0
     T0IF    = 0; // clear interrupt flag since T0 is always running
-    TMR1ON  = 1; // stopwatch on
 }
 
 
@@ -102,11 +92,12 @@ capsensor_init(void)
     
     // Init rolling average
     capsensor_start();
+    uint16_t t0 = TMR1;
     for (int i = 0; i < 16; i++) {
         CAPSENSOR_WAIT_T0_OVERFLOW();
     }
-    uint16_t tmr1 = CAPSENSOR_TIME();
-    capsensor_rolling_avg = tmr1 / 16;
+    uint16_t t1 = TMR1;
+    capsensor_rolling_avg = (t1 - t0) / 16;
 }
 
 
@@ -116,8 +107,10 @@ capsensor_is_button_pressed(void)
     uint8_t do_switch = 0;
     
     capsensor_start();
+    uint16_t t0 = TMR1;
     CAPSENSOR_WAIT_T0_OVERFLOW();
-    capsensor_freq = CAPSENSOR_TIME();
+    uint16_t t1 = TMR1;
+    capsensor_freq = t1 - t0;
     
     switch (capsensor_status) {
         case ST_RELEASED:

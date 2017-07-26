@@ -1,22 +1,13 @@
 #ifndef CAPSENSOR_H
 #define	CAPSENSOR_H
 
+#include <stdint.h>
 #include "config.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
     
-/*
- * Public macros
- */
-#define CAPSENSOR_IS_READY_FOR_ANOTHER() \
-    (TMR1 > TIME_BETWEEN_READS)
-
-
-    /*
- * Public vars
- */    
 uint16_t capsensor_freq;
 uint16_t capsensor_rolling_avg;
 uint16_t capsensor_frozen_avg;
