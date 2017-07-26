@@ -2,10 +2,15 @@
 #define	SWITCH_H
 
 #include <xc.h>
+#include <stdint.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#define SWITCH_OFF  0
+#define SWITCH_ON   1
+
 
 bit switch_status;
 

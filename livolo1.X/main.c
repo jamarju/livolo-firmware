@@ -31,26 +31,8 @@
  * RF = RF connector on main board
  * J1 = J1 connector on PIC board
  * 
- * RA0 (19) O ??? --- JP1-B7, [4 ms high-Z pulse on start, then 0v]
- * RA1 (18) O RELAY1-S, [4 ms high-Z pulse on start, then 0v]
- * RA2 (17) I T0CKI --- RC4 (6) C2OUT
- * RA3 ( 4) I MCLR only [high-Z]
- * RA4 ( 3) A AC POWER HEARTBEAT --- JP1-A3 [high-Z]
- * RA5 ( 2) I --- JP1-A1 --- R23 (unpopulated) [3v when red, 0v when blue]
  * 
- * RB4 (13) I --- JP1-B3 --- RF5, O if soft-uart TX
- * RB5 (12) I USART RX
- * RB6 (11) O LED1 (0=blue, 1=red)
- * RB7 (10) I (yes, must be I) USART TX --- JP1-A2 --- R24 (unpopulated)
  * 
- * RC0 (16) O BUZZER (if any) [4 ms high-Z pulse on start, then 0v]
- * RC1 (15) I C12IN1- (negative feedback of C2), CAP READ 2 (2-gang only)
- * RC2 (14) O RELAY2-S (2-gang only)
- * RC3 ( 7) I C12IN3- (negative feedback of C2), CAP READ 1
- * RC4 ( 6) O C2OUT (uses C2 as a astable multivibrator)
- * RC5 ( 5) O LED2 (0=blue, 1=red) (2-gang only)
- * RC6 ( 8) O RELAY2-R (2-gang only)
- * RC7 ( 9) O RELAY1-R
  */
 
 void main(void) {
@@ -59,13 +41,41 @@ void main(void) {
     power_preinit();
 
     // Tris config (1=in/analog, 0=out)
-    TRISA   = 0b11111101;
-    TRISB   = 0b10111111;
-    TRISC   = 0b00101011;
     
-    // All pins digital, AN3 analog
-    ANSEL   = 0b00000000;
-    ANSELH  = 0b00000000;
+    TRISA       = 0b11111101;
+    // RA0 (19) I   -------1 <--> JP1-B7, ??? [4 ms high-Z pulse on start, then 0v]
+    // RA1 (18) O   ------0- ---> RELAY1-S
+    // RA2 (17) I   -----1-- T0CKI <--- RC4 (6) C2OUT
+    // RA3 ( 4) I   ----1--- MCLR only [high-Z]
+    // RA4 ( 3) I   ---1---- <--- AC POWER HEARTBEAT <--- JP1-A3
+    // RA5 ( 2) I   --1----- <--> JP1-A1 <--> R23 (unpopulated), ??? [3v when red, 0v when blue]
+    // unimpl   x   xx------
+    
+    TRISB       = 0b10111111;
+    // unimpl   x   ----xxxx
+    // RB4 (13) I   ---1---- <--> JP1-B3 <---> RF5, O if soft-uart TX
+    // RB5 (12) I   --1----- USART RX
+    // RB6 (11) O   -0------ ---> LED1 (0=blue, 1=red)
+    // RB7 (10) I   1------- USART TX <--> JP1-A2 <--> R24 (unpopulated). Yes, must be input
+    
+    TRISC       = 0b00101011;
+    // RC0 (16) I   -------1 ---> BUZZER (if any) [4 ms high-Z pulse on start, then 0v]
+    // RC1 (15) I   ------1- C12IN1- (negative feedback of C2), CAP READ 2 (2-gang only)
+    // RC2 (14) O   -----0-- ---> RELAY2-S (2-gang only)
+    // RC3 ( 7) I   ----1--- C12IN3- (negative feedback of C2), CAP READ 1
+    // RC4 ( 6) O   ---0---- C2OUT (uses C2 as a astable multivibrator)
+    // RC5 ( 5) O   --0----- ---> LED2 (0=blue, 1=red) (2-gang only)
+    // RC6 ( 8) O   -1------ ---> RELAY2-R (2-gang only)
+    // RC7 ( 9) O   0------- ---> RELAY1-R
+
+    // All pins digital
+    ANSEL       = 0b00000000;
+    ANSELH      = 0b00000000;
+
+    // Initial pin values
+    PORTA       = 0b00000000;
+    PORTB       = 0b00000000;
+    PORTC       = 0b00000000;
     
     // Timer 1 ON (1 us resolution at Fosc = 4 MHz)
     TMR1    = 0;
@@ -90,13 +100,21 @@ void main(void) {
             if (c == ' ') switch_toggle();
         }
 #endif        
-        if (! power_read()) {
-            switch_off();
+       
+        if (power_read() == POWER_OUTAGE) {
+            // Switch off only if we're on so as not to energize the coil
+            // pointlessly, which would drain the cap and cause voltage
+            // drops everywhere.
+            if (switch_status == SWITCH_ON) {
+                switch_off();
+            }
         }
 
         if (TMR1 - t0 > TIME_BETWEEN_READS) {
             t0 += TIME_BETWEEN_READS;
-            if (capsensor_is_button_pressed() && power_status) {
+            // Keep reading the sensors even after a power outage for
+            // debug purposes.
+            if (capsensor_is_button_pressed() && power_status == POWER_OK) {
                 switch_toggle();
             }
 #ifdef DEBUG

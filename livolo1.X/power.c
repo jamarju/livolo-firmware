@@ -23,7 +23,7 @@ void
 power_preinit(void)
 {
     IOCA4 = 1;  // Interrupt-on-change enabled on A4
-    if (RA4) asm("nop");  // Read RA4 to clear mismatch
+    PORTA;  // Read RA4 to clear mismatch
     RABIF = 0;
     last_tmr1 = TMR1;
     power_status = POWER_OK; // assume we're on AC initially
@@ -48,7 +48,7 @@ power_read(void)
     if (elapsed_us > TIME_TO_SHUTDOWN) {
         elapsed_us = 0;
         if (RABIF) {
-            if (RA4) asm("nop");  // Read RA4 to clear mismatch
+            PORTA;  // Read RA4 to clear mismatch
             RABIF = 0;  // Clear IF
             power_status = POWER_OK;
         } else {

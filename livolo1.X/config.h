@@ -42,7 +42,8 @@ extern "C" {
 // is assumed to be the new condition, eg. if dropped some water on the plate
 #define RELEASE_TIMEOUT     30
 
-// Space out averages 1 every AVERAGING_RATE raw values
+// Space out averages 1 every AVERAGING_RATE raw values. Should be a power of
+// 2 optimally
 #define AVERAGING_RATE      8
 
 // In Fosc/4 cycles (= usec). Slowed down when debugging to see what's going on
@@ -53,22 +54,20 @@ extern "C" {
 #endif
 
 // Time to shutdown the relays after an outage is detected (usec)
-#define TIME_TO_SHUTDOWN    200000UL
+#define TIME_TO_SHUTDOWN    1500000UL
 
-    
-// --------------------------------------------------------------------
-// Friendly pin names
-// --------------------------------------------------------------------
+// Relay operation time (ms), must be >recommended max spec (10 ms), see
+// Hongfa HFE60 datasheet.
+#define RELAY_OP_TIME       20
 
-#define LED         RB6
-#define LED_BLUE    0
-#define LED_RED     1
-    
-#define RELAY1_R    RC7 // relay 1 reset (Hongfa HFE60 2-coil latched)
-#define RELAY1_S    RC6 // relay 1 set
+// Power up delay: time to charge the cap before the relays can switch for
+// the first time. In ms.
+#define POWERUP_TIME        2000
 
-#define RELAY2_R    RC2 // relay 2 reset
-#define RELAY2_S    RA1 // relay 2 set
+// Police lights frequency controls the speed of the powerup light sequence.
+// Must be a power of 2 <=128. Hint: 4 in XC8 free mode, 1 in pro mode.
+#define POLICE_LIGHTS_FREQ  4
+   
 
 #ifdef	__cplusplus
 }
