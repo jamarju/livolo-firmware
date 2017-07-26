@@ -48,9 +48,21 @@ You need MPLAB X IDE + XC8 compiler. Load up the project, compile and flash.
 
 ## Serial connection
 
-Okay, first off the ground traces of the Livolo board (including PIC's GND) are actually referenced to the live wire. **Repeat: GND IS ACTUALLY LIVE, so the challenge here is to be able to talk to a PC without electrocuting yourself**.
+Okay, first off the ground traces of the Livolo board (including PIC's GND) are actually referenced to the live wire. **Repeat: GND IS ACTUALLY LIVE, so the challenge here is to be able to talk to a PC without electrocuting yourself**. 
 
-I chose to use optocouplers for that. But apparently in the optocouplers world you can only have two of a) cheap, b) low current, c) fast. I had a few 6N137 at hand so I used that. They are cheap, they are fast, but they swallow too much current for Livolo's puny power supply.
+In order to pull data safely from the circuit there are two options:
+
+### Battery + inverter / isolation transformer
+
+I won't go into much detail because you should know what you are doing if you want to play with 220V. But if you want to get serial data out of the PIC or just use an oscilloscope to probe the signals, one option is to isolate the Livolo power from the mains supply.
+
+I used a cheap (150W) car battery inverter powered by a 3S LiPo because that's what I had at hand. You can use an isolation transformer as well. If you reference the PIC's Vss to ground via the scope's alligator clip, the whole board now becomes referenced to the real ground and it's a bit safer to play around with. Just don't touch the live and neutral wires of the Livolo.
+
+### Optocouplers
+
+I also tried this, but personally I find the battery + inverter easier and safer while debugging.
+
+Anyhow, the idea is to use optocouplers. But apparently in the optocouplers world you can only have two of a) cheap, b) low current, c) fast. I had a few 6N137 at hand so I used that. They are cheap, they are fast, but they swallow too much current for Livolo's puny power supply.
 
 So I had to add a battery to provide the extra oomph to light up the diode of one of the OCs and drive the collector of the other, yuck!
 
