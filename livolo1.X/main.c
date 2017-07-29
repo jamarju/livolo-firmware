@@ -5,77 +5,76 @@
 #include "uart.h"
 #include "capsensor.h"
 #include "switch.h"
-#include "power.h"
+#include "heartbeat.h"
+#include "util.h"
+#include "extrigger.h"
 
-// PIC16F690 Configuration Bit Settings
-
-// 'C' source line config statements
-
-// CONFIG
-#pragma config FOSC = INTRCIO   // Oscillator Selection bits (INTOSCIO oscillator: I/O function on RA4/OSC2/CLKOUT pin, I/O function on RA5/OSC1/CLKIN)
-#pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT disabled and can be enabled by SWDTEN bit of the WDTCON register)
-#pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
-#pragma config MCLRE = OFF      // MCLR pin function is I/O
-#pragma config CP = OFF         // Code Protection bit (Program memory code protection is disabled)
-#pragma config CPD = OFF        // Data Code Protection bit (Data memory code protection is disabled)
-#pragma config BOREN = ON       // Brown-out Reset Selection bits (BOR enabled)
-#pragma config IESO = ON        // Internal External Switchover bit (Internal External Switchover mode is enabled)
-#pragma config FCMEN = ON       // Fail-Safe Clock Monitor Enabled bit (Fail-Safe Clock Monitor is enabled)
-
-// #pragma config statements should precede project file includes.
-// Use project enums instead of #define for ON and OFF.
-
-/**
- * JP1-CR: C=column R=row where 12v=A7, Vdd=B1, Vss=B2 and so on
- * In brackets [behavior] as observed in the original firmware
- * RF = RF connector on main board
- * J1 = J1 connector on PIC board
- * 
- * 
- * 
- */
 
 void main(void) {
     // Early inits (before osc is settled)
     switch_preinit();
-    power_preinit();
+    heartbeat_preinit();
 
-    // Tris config (1=in/analog, 0=out)
+    /* Tris config (1=in/analog, 0=out)
+     * 
+     * JP1-CR: C=column R=row where 12v=A7, Vdd=B1, Vss=B2 and so on
+     * In brackets [behavior] as observed in the original firmware
+     * RF = RF connector on main board
+     * J1 = J1 connector on PIC board
+     */
     
-    TRISA       = 0b11111101;
-    // RA0 (19) I   -------1 <--> JP1-B7, ??? [4 ms high-Z pulse on start, then 0v]
-    // RA1 (18) O   ------0- ---> RELAY1-S
-    // RA2 (17) I   -----1-- T0CKI <--- RC4 (6) C2OUT
-    // RA3 ( 4) I   ----1--- MCLR only [high-Z]
-    // RA4 ( 3) I   ---1---- <--- AC POWER HEARTBEAT <--- JP1-A3
-    // RA5 ( 2) I   --1----- <--> JP1-A1 <--> R23 (unpopulated), ??? [3v when red, 0v when blue]
-    // unimpl   x   xx------
+    TRISA   = 0b11011100;
+    // RA0 (19) -------0 <--> JP1-B7, ??? [4 ms high-Z pulse on start, then 0v]
+    // RA1 (18) ------0- ---> JP1-A6 ---> RELAY1-S
+    // RA2 (17) -----1-- <--- RC4 (6) C2OUT (T0CKI from relaxation osc)
+    // RA3 ( 4) ----1--- MCLR only [high-Z]
+    // RA4 ( 3) ---1---- <--- JP1-A3 <--- AC POWER HEARTBEAT
+    // RA5 ( 2) --0----- ---> JP1-A1 ---> R23 --> 2-way COM TX [3v when red, 0v when blue]
+    // unimpl   xx------
     
-    TRISB       = 0b10111111;
-    // unimpl   x   ----xxxx
-    // RB4 (13) I   ---1---- <--> JP1-B3 <---> RF5, O if soft-uart TX
-    // RB5 (12) I   --1----- USART RX
-    // RB6 (11) O   -0------ ---> LED1 (0=blue, 1=red)
-    // RB7 (10) I   1------- USART TX <--> JP1-A2 <--> R24 (unpopulated). Yes, must be input
+    TRISB   = 0b00101111;
+    // unimpl   ----xxxx
+    // RB4 (13) ---0---- ---> JP1-B3 ---> RF5 External feedback OUT (or soft-uart TX)
+    // RB5 (12) --1----- <--- JP1-B4 <--- RF4 External feedback IN
+    // RB6 (11) -0------ ---> LED1 (0=blue, 1=red)
+    // RB7 (10) 0------- <--- JP1-A2 <--- R24 <--- 2-way COM RX (out if unpopulated to save power)
     
-    TRISC       = 0b00101011;
-    // RC0 (16) I   -------1 ---> BUZZER (if any) [4 ms high-Z pulse on start, then 0v]
-    // RC1 (15) I   ------1- C12IN1- (negative feedback of C2), CAP READ 2 (2-gang only)
-    // RC2 (14) O   -----0-- ---> RELAY2-S (2-gang only)
-    // RC3 ( 7) I   ----1--- C12IN3- (negative feedback of C2), CAP READ 1
-    // RC4 ( 6) O   ---0---- C2OUT (uses C2 as a astable multivibrator)
-    // RC5 ( 5) O   --0----- ---> LED2 (0=blue, 1=red) (2-gang only)
-    // RC6 ( 8) O   -1------ ---> RELAY2-R (2-gang only)
-    // RC7 ( 9) O   0------- ---> RELAY1-R
+    TRISC   = 0b00001010;
+    // RC0 (16) -------0 ---> JP1-A4 ---> BUZZER (if any) [4 ms high-Z pulse on start, then 0v]
+    // RC1 (15) ------1- C12IN1- (negative feedback of C2), CAP READ 2 (2-gang only)
+    // RC2 (14) -----0-- ---> JP1-A5 ---> RELAY2-S (2-gang only)
+    // RC3 ( 7) ----1--- C12IN3- (negative feedback of C2), CAP READ 1
+    // RC4 ( 6) ---0---- C2OUT
+    // RC5 ( 5) --0----- ---> LED2 (0=blue, 1=red) (2-gang only)
+    // RC6 ( 8) -0------ ---> JP1-B5 ---> RELAY2-R (2-gang only)
+    // RC7 ( 9) 0------- ---> JP1-B6 ---> RELAY1-R
 
     // All pins digital
-    ANSEL       = 0b00000000;
-    ANSELH      = 0b00000000;
+    ANSEL   = 0b00000000;
+    ANSELH  = 0b00000000;
 
+    // Pull-ups
+    WPUA    = 0b00000000;
+    // RA0 (19) -------0
+    // RA1 (18) ------0-
+    // RA2 (17) -----0--
+    // RA4 ( 3) ---0----
+    // RA5 ( 2) --0-----
+    // unimpl   xx--x---
+
+    WPUB    = 0b00100000;
+    // unimpl   ----xxxx
+    // RB4 (13) ---0----
+    // RB5 (12) --1----- yes
+    // RB6 (11) -0------
+    // RB7 (10) 0-------
+    
+    nRABPU  = 0; // PORTA/PORTB pull-ups are enabled by individual PORT latch values
+            
     // Initial pin values
-    PORTA       = 0b00000000;
-    PORTB       = 0b00000000;
-    PORTC       = 0b00000000;
+    PORTA   = 0b00000000;
+    PORTB   = 0b00000000;
+    PORTC   = 0b00000000;
     
     // Timer 1 ON (1 us resolution at Fosc = 4 MHz)
     TMR1    = 0;
@@ -83,25 +82,19 @@ void main(void) {
     
     // Wait until osc is stable
     while (HTS == 0) ;
-
+    
     switch_init();
-    uart_init();
     capsensor_init();
 
-    uint16_t t0 = 0;
-    
+    TMR1ON = 0; // stop the timer to prevent race condition
+
     for (;;) {
-#ifdef ACCEPT_CMDS_VIA_UART
-        if (uart_data_ready()) {
-            uint8_t c = uart_read();
-            printf("\n%c RECV\r\n", c);
-            if (c == 'i') switch_on();
-            if (c == 'o') switch_off();
-            if (c == ' ') switch_toggle();
-        }
-#endif        
-       
-        if (power_read() == POWER_OUTAGE) {
+        TMR1 = 0;
+        TMR1ON = 1;
+
+#ifdef TIME_TO_SHUTDOWN
+        heartbeat_update();
+        if (heartbeat_outage()) {
             // Switch off only if we're on so as not to energize the coil
             // pointlessly, which would drain the cap and cause voltage
             // drops everywhere.
@@ -109,23 +102,28 @@ void main(void) {
                 switch_off();
             }
         }
-
-        if (TMR1 - t0 > TIME_BETWEEN_READS) {
-            t0 += TIME_BETWEEN_READS;
-            // Keep reading the sensors even after a power outage for
-            // debug purposes.
-            if (capsensor_is_button_pressed() && power_status == POWER_OK) {
-                switch_toggle();
-            }
-#ifdef DEBUG
-            printf("%u,%u,%u,%u,%u,%u\r\n", 
-                    capsensor_rolling_avg, 
-                    capsensor_frozen_avg, 
-                    capsensor_freq,
-                    capsensor_status,
-                    power_status,
-                    switch_status);
-#endif    
+#endif
+        
+        if ((capsensor_is_button_pressed() || extrigger_read()) && !heartbeat_outage()) {
+            switch_toggle();
         }
+
+        TMR1ON = 0;
+        uint16_t ms_left = TIME_BETWEEN_READS - TMR1; // assumes 4 MHz CLK
+
+#ifdef DEBUG
+        printf("%u,%u,%u,%u,%u,%u,%u\r\n", 
+                cap_rolling_avg / 16, 
+                cap_frozen_avg / 16, 
+                cap_raw,
+                cap_cycles,
+                heartbeat_cycles,
+                switch_status,
+                TMR1);
+#endif
+
+        CLK_31KHZ();
+        DELAY_31KHZ(ms_left);
+        CLK_4MHZ();
     }
 }

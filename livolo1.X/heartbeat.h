@@ -7,13 +7,11 @@
 extern "C" {
 #endif
 
-#define POWER_OUTAGE    0
-#define POWER_OK        1
+uint16_t heartbeat_cycles;
 
-bit power_status;
-
-void power_preinit(void);
-bit power_read(void);
+void heartbeat_preinit(void);
+void heartbeat_update(void);
+bit heartbeat_outage(void);
 
 
 #ifdef	__cplusplus

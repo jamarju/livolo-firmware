@@ -9,52 +9,48 @@ extern "C" {
 // Compilation flags
 // --------------------------------------------------------------------
 
-// enable debug serial out, note this also slows down time between sensor reads
+// Enable debug serial out, note this also slows down time between sensor reads
 #define DEBUG
 
 // Use RB4 (RF module pin #5 which is easier to solder) as TX instead of RB7/TX
 #define UART_TX_BITBANG_ON_RB4
     
-// Accept commands via USART (RX pin)
-#define ACCEPT_CMDS_VIA_UART
-    
 // --------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------
 
-// For __delay_ms and __delay_us
-#define _XTAL_FREQ          4000000UL 
-
-// BPS; 1 byte @57.6K = 173.611 usecs
+// BPS; 1 byte @57.6K = 173.611 usecs. When UART_TX_BITBANG_ON_RB4 is defined,
+// TX happens at 57600 bps regardless of this and only RX is affected.
 #define BAUD_RATE           57600UL
 
+// This is the main loop's period. Sensing, outage detection and debug output
+// happens once every TIME_BETWEEN_READS / (Fosc/4) seconds. (= 1 us @ 4 MHz).
+// The clock is stopped while sending debug data via UART, so the actual
+// period will be longer if DEBUG is defined.
+#define TIME_BETWEEN_READS  32768
+
 // Trip threshold in 1/256 fractions of the average frequency
-// working (empirical) values: 17 for 5V, 10 for 3V
-#define TRIP_THRESHOLD      10
+// working (empirical) values: 3 for 3V
+#define TRIP_THRESHOLD      3
 
 // Release threshold in 1/256 fractions of the average frequency
-#define HYST_THRESHOLD      4
+#define HYST_THRESHOLD      2
 
-// Min reads below threshold to trip the switch
-#define READS_TO_TRIP       2
+// Min sensor trips to actually switch
+#define READS_TO_SWITCH     2
 
 // If sensor is not released after RELEASE_TIMEOUT cycles, the last frequency
-// is assumed to be the new condition, eg. if dropped some water on the plate
-#define RELEASE_TIMEOUT     30
+// is assumed to be the new condition, eg. if dropped some water on the plate.
+// 180 = ~3s at 16.384 ms per cycle.
+#define RELEASE_TIMEOUT     180
 
 // Space out averages 1 every AVERAGING_RATE raw values. Should be a power of
 // 2 optimally
-#define AVERAGING_RATE      8
+#define AVERAGING_RATE      2
 
-// In Fosc/4 cycles (= usec). Slowed down when debugging to see what's going on
-#ifdef DEBUG
-#define TIME_BETWEEN_READS  49152
-#else
-#define TIME_BETWEEN_READS  16384
-#endif
-
-// Time to shutdown the relays after an outage is detected (usec)
-#define TIME_TO_SHUTDOWN    1500000UL
+// Time to shutdown the relays after an outage is detected. In read cycles.
+// Undefine to disable outage detection completely to help debugging.
+#define TIME_TO_SHUTDOWN    20
 
 // Relay operation time (ms), must be >recommended max spec (10 ms), see
 // Hongfa HFE60 datasheet.

@@ -2,14 +2,11 @@
 #include <stdint.h>
 #include "switch.h"
 #include "config.h"
+#include "util.h"
 
 /*
  * Private constants
  */
-#define LED         RB6
-#define LED_BLUE    0
-#define LED_RED     1
-    
 #define RELAY1_R    RC7 // relay 1 reset (Hongfa HFE60 2-coil latched)
 #define RELAY1_S    RC6 // relay 1 set
 
@@ -58,7 +55,6 @@ switch_init()
         }
     }
     switch_off();
-    LED = LED_BLUE;
 }
 
 
@@ -77,19 +73,25 @@ void
 switch_on(void)
 {
     switch_status = SWITCH_ON;
+    CLK_31KHZ();
     LED = LED_RED;
+    LED = LED_BLUE; // Measure LFINTOSC clock
     RELAY1_S = 1;
-    __delay_ms(RELAY_OP_TIME);
+    DELAY_31KHZ(RELAY_OP_TIME);
     RELAY1_S = 0;
+    CLK_4MHZ();
+    LED = LED_RED;
 }
 
 void
 switch_off(void)
 {
     switch_status = SWITCH_OFF;
-    LED = LED_BLUE;
+    CLK_31KHZ();
     RELAY1_R = 1;
-    __delay_ms(RELAY_OP_TIME);
+    DELAY_31KHZ(RELAY_OP_TIME);
     RELAY1_R = 0;
+    CLK_4MHZ();
+    LED = LED_BLUE;
 }
 

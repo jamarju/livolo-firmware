@@ -8,7 +8,9 @@
       <itemPath>uart.h</itemPath>
       <itemPath>capsensor.h</itemPath>
       <itemPath>switch.h</itemPath>
-      <itemPath>power.h</itemPath>
+      <itemPath>util.h</itemPath>
+      <itemPath>extrigger.h</itemPath>
+      <itemPath>heartbeat.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -22,7 +24,9 @@
       <itemPath>capsensor.c</itemPath>
       <itemPath>switch.c</itemPath>
       <itemPath>uart_bitbang.asm</itemPath>
-      <itemPath>power.c</itemPath>
+      <itemPath>confbits.c</itemPath>
+      <itemPath>extrigger.c</itemPath>
+      <itemPath>heartbeat.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -72,7 +76,7 @@
         <property key="define-macros" value=""/>
         <property key="disable-optimizations" value="false"/>
         <property key="extra-include-directories" value=""/>
-        <property key="favor-optimization-for" value="-speed,+space"/>
+        <property key="favor-optimization-for" value="+speed,-space"/>
         <property key="identifier-length" value="255"/>
         <property key="local-generation" value="false"/>
         <property key="operation-mode" value="pro"/>
@@ -85,7 +89,7 @@
         <property key="optimization-invariant-value" value="16"/>
         <property key="optimization-level" value="9"/>
         <property key="optimization-set" value="default"/>
-        <property key="optimization-speed" value="false"/>
+        <property key="optimization-speed" value="true"/>
         <property key="optimization-stable-enable" value="false"/>
         <property key="preprocess-assembler" value="true"/>
         <property key="undefine-macros" value=""/>

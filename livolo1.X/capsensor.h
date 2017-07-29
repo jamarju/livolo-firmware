@@ -8,10 +8,10 @@
 extern "C" {
 #endif
     
-uint16_t capsensor_freq;
-uint16_t capsensor_rolling_avg;
-uint16_t capsensor_frozen_avg;
-bit capsensor_status;
+uint16_t cap_raw;
+uint16_t cap_rolling_avg;
+uint16_t cap_frozen_avg;
+uint8_t cap_cycles;
 
 
 /*
