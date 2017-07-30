@@ -2,8 +2,6 @@
 #include "config.h"
 
 
-#ifdef UART_TX_BITBANG_ON_RB4
-
 ; Bitbang RB4 to transmit serial data at (hardcoded) 57600 bps.
 ; Requirements:
 ;
@@ -68,6 +66,3 @@ global _uart_bitbang_write_57600
 ; MPLAB X -> project settings -> XC8 global options -> XC8 compiler ->
 ; Optimizations -> Disable Optimizations -> build -> check asm list file.
 signat _uart_bitbang_write_57600,4217
-    
-
-#endif

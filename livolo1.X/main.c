@@ -76,21 +76,21 @@ void main(void) {
     PORTB   = 0b00000000;
     PORTC   = 0b00000000;
     
-    // Timer 1 ON (1 us resolution at Fosc = 4 MHz)
-    TMR1    = 0;
-    TMR1ON  = 1;
-    
     // Wait until osc is stable
     while (HTS == 0) ;
     
     switch_init();
     capsensor_init();
 
-    TMR1ON = 0; // stop the timer to prevent race condition
+    // WDT prescaler
+    CLRWDT();
+    WDTCON  = 0b00001010;
+    // unimpl   xxx-----
+    // WDTPS    ---0100- 1:512  ~ 34/17/11ms @ 15/31/45 KHz LFINTOSC (min/typ/max)
+    // WDTPS    ---0101- 1:1024 ~ 68/33/23ms @ 15/31/45 KHz LFINTOSC (min/typ/max)
+    // SWDTEN   -------0 WDT is turned off (for now)
 
     for (;;) {
-        TMR1 = 0;
-        TMR1ON = 1;
 
 #ifdef TIME_TO_SHUTDOWN
         heartbeat_update();
@@ -108,22 +108,18 @@ void main(void) {
             switch_toggle();
         }
 
-        TMR1ON = 0;
-        uint16_t ms_left = TIME_BETWEEN_READS - TMR1; // assumes 4 MHz CLK
-
 #ifdef DEBUG
-        printf("%u,%u,%u,%u,%u,%u,%u\r\n", 
+        printf("%u,%u,%u,%u,%u,%u\r\n", 
                 cap_rolling_avg / 16, 
                 cap_frozen_avg / 16, 
                 cap_raw,
                 cap_cycles,
                 heartbeat_cycles,
-                switch_status,
-                TMR1);
+                switch_status);
 #endif
 
-        CLK_31KHZ();
-        DELAY_31KHZ(ms_left);
-        CLK_4MHZ();
+        SWDTEN = 1;
+        SLEEP();    // clear WDT and sleep
+        SWDTEN = 0;
     }
 }

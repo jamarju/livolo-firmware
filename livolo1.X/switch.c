@@ -46,6 +46,9 @@ switch_init()
     uint16_t t = POWERUP_TIME * 1000UL / 65536;
     uint8_t pwmt = 0;   // time
     uint8_t pwmd = 0;   // duty
+    TMR1ON = 0;
+    TMR1 = 0;
+    TMR1ON = 1;
     while (t) {
         if (pwmt == pwmd || (pwmt ^ pwmd) == 0xff) LED = ~LED;
         if (++pwmt == 0) pwmd += POLICE_LIGHTS_FREQ;
@@ -54,6 +57,7 @@ switch_init()
             TMR1IF = 0;
         }
     }
+    TMR1ON = 0;
     switch_off();
 }
 
@@ -73,11 +77,9 @@ void
 switch_on(void)
 {
     switch_status = SWITCH_ON;
-    CLK_31KHZ();
-    LED = LED_RED;
-    LED = LED_BLUE; // Measure LFINTOSC clock
     RELAY1_S = 1;
-    DELAY_31KHZ(RELAY_OP_TIME);
+    CLK_125KHZ();
+    DELAY_125KHZ(RELAY_OP_TIME);
     RELAY1_S = 0;
     CLK_4MHZ();
     LED = LED_RED;
@@ -87,9 +89,9 @@ void
 switch_off(void)
 {
     switch_status = SWITCH_OFF;
-    CLK_31KHZ();
+    CLK_125KHZ();
     RELAY1_R = 1;
-    DELAY_31KHZ(RELAY_OP_TIME);
+    DELAY_125KHZ(RELAY_OP_TIME);
     RELAY1_R = 0;
     CLK_4MHZ();
     LED = LED_BLUE;
